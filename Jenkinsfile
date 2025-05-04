@@ -19,7 +19,7 @@ node {
         }
 
         stage('Build JVM') {
-            echo 'Compilando aplicação na JVM'
+            echo 'Compilando aplicação na JVM...'
             sh './gradlew clean assemble'
         }
 
@@ -34,7 +34,7 @@ node {
         }
 
         stage('Deploy') {
-            echo 'Deploy step aqui'
+            echo 'Deploy step aqui....'
         }
     }
 }
