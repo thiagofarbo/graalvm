@@ -19,7 +19,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
-                echo 'Código fonte obtido com sucesso'
+                echo 'Código fonte obtido com sucesso...'
 
                 // Garante que o gradlew seja executável
                 sh 'chmod +x ./gradlew'
@@ -39,7 +39,7 @@ pipeline {
             steps {
                 // Build do projeto Java com Gradle
                 sh './gradlew assemble'
-                echo 'Projeto Java compilado com sucesso'
+                echo 'Projeto Java compilado com sucesso...'
             }
         }
 
