@@ -19,22 +19,23 @@ node {
         }
 
         stage('Build JVM') {
-            echo 'Compilando aplicação na JVM...'
+            echo 'Compilando aplicação na JVM'
             sh './gradlew clean assemble'
         }
 
         stage('Build Native Image') {
-            echo 'Gerando imagem nativa com GraalVM...'
+            echo 'Gerando imagem nativa com GraalVM'
             sh './gradlew clean nativeCompile'
         }
 
         stage('Test') {
-            echo 'Executando testes...'
+            echo 'Executando testes'
             sh './gradlew test'
         }
 
         stage('Deploy') {
-            echo 'Deploy step aqui....'
+            echo 'Deploy step aqui'
+            // Coloque seus passos de deploy aqui
         }
     }
 }
