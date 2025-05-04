@@ -24,12 +24,12 @@ node {
         }
 
         stage('Build Native Image') {
-            echo 'Gerando imagem nativa com GraalVM'
+            echo 'Gerando imagem nativa com GraalVM...'
             sh './gradlew clean nativeCompile'
         }
 
         stage('Test') {
-            echo 'Executando testes'
+            echo 'Executando testes...'
             sh './gradlew test'
         }
 
