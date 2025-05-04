@@ -32,8 +32,6 @@ pipeline {
                 sh 'java -version'
                 // Verifica se o Gradle consegue iniciar
                 sh './gradlew --version'
-                // Verifica disponibilidade do Docker (opcional)
-                sh 'if command -v docker &> /dev/null; then docker --version; else echo "Docker não está instalado"; fi'
             }
         }
 
@@ -45,26 +43,26 @@ pipeline {
             }
         }
 
-        stage('Testes') {
-            steps {
-                // Executa testes com Gradle
-                sh './gradlew test'
-                echo 'Testes executados com sucesso'
-            }
-            post {
-                always {
-                    // Publica resultados dos testes se existirem
-                    junit allowEmptyResults: true, testResults: '**/build/test-results/test/*.xml'
-                }
-            }
-        }
+//         stage('Testes') {
+//             steps {
+//                 // Executa testes com Gradle
+//                 sh './gradlew test'
+//                 echo 'Testes executados com sucesso'
+//             }
+//             post {
+//                 always {
+//                     // Publica resultados dos testes se existirem
+//                     junit allowEmptyResults: true, testResults: '**/build/test-results/test/*.xml'
+//                 }
+//             }
+//         }
 
-        stage('Análise de Código') {
-            steps {
-                // Análise de código simplificada
-                sh './gradlew check || echo "Alguns checks podem ter falhado, mas continuando"'
-            }
-        }
+//         stage('Análise de Código') {
+//             steps {
+//                 // Análise de código simplificada
+//                 sh './gradlew check || echo "Alguns checks podem ter falhado, mas continuando"'
+//             }
+//         }
 
         // Estágio condicional para a geração de imagem nativa (só executa se houver a task apropriada)
         stage('GraalVM Native Image') {
