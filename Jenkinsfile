@@ -1,117 +1,126 @@
 pipeline {
-    agent any
-    
-    // Configuração de ferramentas (opcional)
-    tools {
-        // Especifique sua versão do Maven, se disponível no Jenkins
-        // maven 'Maven 3.8.6'
-        
-        // Especifique sua versão do JDK, se disponível no Jenkins
-        // jdk 'JDK 17'
+    agent {
+        docker {
+            // Usa a imagem Docker GraalVM que você criou anteriormente
+            image 'graalvm21'
+            // Monta o socket Docker para permitir comandos Docker dentro do container
+            args '-v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.gradle:/root/.gradle'
+        }
     }
-    
-    // Variáveis de ambiente
+
     environment {
-        // Exemplo de variáveis que podem ser utilizadas na pipeline
-        APP_NAME = 'demo-native'
-        VERSION = '1.0.0'
+        // Variáveis para o projeto
+        APP_NAME = 'graalvm-app'
+        VERSION = "${BUILD_NUMBER}"
+        // Caminho para o binário nativo gerado pelo GraalVM
+        NATIVE_IMAGE_PATH = 'build/native-image'
     }
-    
-    // Estágios da pipeline
+
     stages {
         stage('Checkout') {
             steps {
-                // Checkout do código fonte
                 checkout scm
                 echo 'Código fonte obtido com sucesso'
             }
         }
-        
-        stage('Build') {
+
+        stage('Build Java') {
             steps {
-                // Comandos de build - ajuste conforme sua aplicação
-                sh 'echo "Executando build..."'
-                
-                // Exemplo para Maven
-                // sh 'mvn clean package -DskipTests'
-                
-                // Exemplo para Gradle
-                // sh './gradlew build -x test'
+                // Build do projeto Java com Gradle
+                sh './gradlew assemble --no-daemon'
+                echo 'Projeto Java compilado com sucesso'
             }
         }
-        
+
         stage('Testes') {
             steps {
-                // Comandos para executar testes
-                sh 'echo "Executando testes..."'
-                
-                // Exemplo para Maven
-                // sh 'mvn test'
-                
-                // Exemplo para Gradle
-                // sh './gradlew test'
+                // Executa testes com Gradle
+                sh './gradlew test --no-daemon'
+                echo 'Testes executados com sucesso'
             }
-            
             post {
                 always {
-                    // Publicar resultados de testes (opcional)
-                    echo 'Processando resultados dos testes'
-                    // junit '**/target/surefire-reports/*.xml'
+                    // Publica resultados dos testes
+                    junit '**/build/test-results/test/*.xml'
                 }
             }
         }
-        
+
         stage('Análise de Código') {
             steps {
-                // Integração com ferramentas de análise como SonarQube
-                sh 'echo "Executando análise de código..."'
-                
-                // Exemplo para SonarQube
-                // withSonarQubeEnv('SonarQube') {
-                //     sh 'mvn sonar:sonar'
-                // }
+                // Pode ser expandido com integração SonarQube
+                echo 'Análise de código estático'
+                sh './gradlew check --no-daemon'
             }
         }
-        
-        stage('Build da Imagem Docker') {
+
+        stage('GraalVM Native Image') {
             steps {
-                // Construir imagem Docker da aplicação
-                sh 'echo "Construindo imagem Docker..."'
-                
-                // Exemplo de comando para build de imagem
-                // sh "docker build -t ${env.APP_NAME}:${env.VERSION} ."
+                // Comando para gerar imagem nativa com GraalVM usando Gradle
+                sh '''
+                    echo "Gerando imagem nativa com GraalVM..."
+                    ./gradlew nativeCompile --no-daemon
+                '''
+                echo 'Imagem nativa gerada com sucesso'
             }
         }
-        
+
+        stage('Build Imagem Docker') {
+            steps {
+                // Constrói uma imagem Docker usando o binário nativo
+                sh '''
+                    echo "Construindo imagem Docker a partir da imagem nativa..."
+                    docker build -f src/main/docker/Dockerfile.native -t ${APP_NAME}:${VERSION} .
+                '''
+                echo 'Imagem Docker construída com sucesso'
+            }
+        }
+
+        stage('Testes de Integração') {
+            steps {
+                // Executa testes de integração usando o binário nativo
+                sh '''
+                    echo "Executando testes de integração..."
+                    ./gradlew integrationTest --no-daemon
+                '''
+                echo 'Testes de integração concluídos'
+            }
+        }
+
         stage('Deploy') {
+            when {
+                branch 'main'  // Ou 'master', dependendo da sua branch principal
+            }
             steps {
-                // Deploy da aplicação - ajuste conforme seu ambiente
-                sh 'echo "Realizando deploy da aplicação..."'
-                
-                // Exemplo de deploy com Docker
-                // sh "docker run -d -p 8080:8080 --name ${env.APP_NAME} ${env.APP_NAME}:${env.VERSION}"
+                echo 'Realizando deploy da aplicação...'
+                // Exemplo de push para Docker Registry
+                sh '''
+                    echo "Publicando imagem Docker..."
+                    docker tag ${APP_NAME}:${VERSION} seu-registry/${APP_NAME}:${VERSION}
+                    docker tag ${APP_NAME}:${VERSION} seu-registry/${APP_NAME}:latest
+                    # docker push seu-registry/${APP_NAME}:${VERSION}
+                    # docker push seu-registry/${APP_NAME}:latest
+                '''
             }
         }
     }
-    
-    // Ações após a execução da pipeline
+
     post {
         success {
             echo 'Pipeline executada com sucesso!'
-            // Notificações ou ações em caso de sucesso
-            // slackSend channel: '#ci-cd', color: 'good', message: "Pipeline concluída com sucesso: ${env.JOB_NAME} ${env.BUILD_NUMBER}"
         }
-        
+
         failure {
             echo 'Pipeline falhou!'
-            // Notificações ou ações em caso de falha
-            // slackSend channel: '#ci-cd', color: 'danger', message: "Falha na pipeline: ${env.JOB_NAME} ${env.BUILD_NUMBER}"
         }
-        
+
         always {
-            // Ações que sempre devem ser executadas, independente do resultado
-            echo 'Limpando workspace...'
-            // cleanWs()
+            echo 'Limpando recursos...'
+            sh '''
+                docker system prune -f
+                ./gradlew clean --no-daemon
+                echo "Workspace limpo."
+            '''
         }
     }
 }
