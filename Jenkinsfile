@@ -35,7 +35,6 @@ node {
 
         stage('Deploy') {
             echo 'Deploy step aqui'
-            // Coloque seus passos de deploy aqui
         }
     }
 }
